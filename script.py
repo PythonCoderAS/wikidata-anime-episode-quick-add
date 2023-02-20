@@ -64,6 +64,7 @@ class Bot(PropertyAdderBot):
         episode_data: list[EpisodeData],
         season_item: ItemPage,
         myanimelist_id: str,
+        old_edit_group_id: Optional[str] = None,
     ):
         super().__init__()
         self.episode_data = episode_data
@@ -76,14 +77,23 @@ class Bot(PropertyAdderBot):
             self.anime_item = anime_claim.value
         self.season_container = ItemContainer(self.season_item)
         self.anime_container = ItemContainer(self.anime_item)
-        self.episode_items: list[ItemPage] = self.season_container.claims(has_parts).values
+        self.episode_items: list[ItemPage] = self.season_container.claims(
+            has_parts
+        ).values
         if len(self.episode_items) != 0:
-            assert len(self.episode_items) == len(self.episode_data), "Episode count mismatch"
-        if num_eps_claim := self.season_container.claims(number_of_episodes).first():
-            assert (
-                num_eps_claim.value.amount == len(self.episode_data)
+            assert len(self.episode_items) == len(
+                self.episode_data
             ), "Episode count mismatch"
-            
+        if num_eps_claim := self.season_container.claims(number_of_episodes).first():
+            assert num_eps_claim.value.amount == len(
+                self.episode_data
+            ), "Episode count mismatch"
+        self.old_edit_group_id = old_edit_group_id
+
+    def get_edit_group_id(self) -> str:
+        if self.old_edit_group_id:
+            return self.old_edit_group_id
+        return super().get_edit_group_id()
 
     def get_edit_summary(self, page: ItemPage) -> str:
         if page.id == "-1":
@@ -196,7 +206,10 @@ class Bot(PropertyAdderBot):
         item = ItemPage(site)
         item.labels["en"] = episode.title_en
         item.aliases["en"] = []
-        if episode.title_romaji and episode.title_romaji.strip() != episode.title_en.strip():
+        if (
+            episode.title_romaji
+            and episode.title_romaji.strip() != episode.title_en.strip()
+        ):
             item.aliases["en"].append(episode.title_romaji)
         anime_name_en = self.anime_container.labels("en")
         if anime_name_en is not None:
@@ -277,47 +290,57 @@ class Bot(PropertyAdderBot):
 
 
 def main():
-    season_id = input("Enter season item ID: ").strip()
-    season_item = ItemPage(site, season_id)
-    container = ItemContainer(season_item)
-    myanimelist_claim = container.claims(mal_id).first()
-    if myanimelist_claim is None:
-        myanimelist_id = input("Enter MyAnimeList ID: ").strip()
-    else:
-        myanimelist_id = myanimelist_claim.value
-    episode_data: list[EpisodeData] = []
-    count = None
-    page = 1
-    while True:
-        try:
-            r = session.get(
-                f"https://api.jikan.moe/v4/anime/{myanimelist_id}/episodes?page={page}"
-            )
-            r.raise_for_status()
-            data = r.json()
-            assert "data" in data
-            if count is None:
-                count = data["pagination"]["last_visible_page"]
-            episode_data.extend(
-                [
-                    EpisodeData(
-                        number=num,
-                        title_en=item["title"],
-                        title_ja=item["title_japanese"],
-                        title_romaji=item["title_romanji"],
-                        aired=Timestamp.fromisoformat(item["aired"]),
-                    )
-                    for num, item in enumerate(data["data"], 1)
-                ]
-            )
-            if page == count:
-                break
-            else:
-                page += 1
-        except (ConnectionError, HTTPError, AssertionError):
-            sleep(5)
-    bot = Bot(episode_data, season_item, myanimelist_id)
-    bot.run()
+    season_ids = [
+        season_id.strip()
+        for season_id in input("Enter season item ID (for multiple separate with |): ")
+        .strip()
+        .split("|")
+    ]
+    old_eg_id = None
+    for season_id in season_ids:
+        season_item = ItemPage(site, season_id)
+        container = ItemContainer(season_item)
+        myanimelist_claim = container.claims(mal_id).first()
+        if myanimelist_claim is None:
+            myanimelist_id = input("Enter MyAnimeList ID: ").strip()
+        else:
+            myanimelist_id = myanimelist_claim.value
+        episode_data: list[EpisodeData] = []
+        count = None
+        page = 1
+        while True:
+            try:
+                r = session.get(
+                    f"https://api.jikan.moe/v4/anime/{myanimelist_id}/episodes?page={page}"
+                )
+                r.raise_for_status()
+                data = r.json()
+                assert "data" in data
+                if count is None:
+                    count = data["pagination"]["last_visible_page"]
+                episode_data.extend(
+                    [
+                        EpisodeData(
+                            number=num,
+                            title_en=item["title"],
+                            title_ja=item["title_japanese"],
+                            title_romaji=item["title_romanji"],
+                            aired=Timestamp.fromisoformat(item["aired"]),
+                        )
+                        for num, item in enumerate(data["data"], 1)
+                    ]
+                )
+                if page == count:
+                    break
+                else:
+                    page += 1
+            except (ConnectionError, HTTPError, AssertionError):
+                sleep(5)
+        bot = Bot(
+            episode_data, season_item, myanimelist_id, old_edit_group_id=old_eg_id
+        )
+        bot.run()
+        old_eg_id = bot.get_edit_group_id()
 
 
 if __name__ == "__main__":
