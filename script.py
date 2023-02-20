@@ -155,13 +155,13 @@ class Bot(PropertyAdderBot):
         ):
             prop = ExtraProperty.from_property_id_and_value(has_parts, item)
             prop.add_qualifier_with_property_id_and_value(series_ordinal, str(num))
-            with start_span(
-                op="add_episode_links", description="Linking episodes to each other"
+            with start_transaction(
+                op="add_episode_links", name="Linking episodes to each other"
             ):
                 self.link_episode_item(episode_data, item)
             season_oh.add_property(prop)
-        with start_span(
-            op="add_season_links", description="Linking season to episodes"
+        with start_transaction(
+            op="add_season_links", name="Linking season to episodes"
         ):
             self.process(season_oh, self.season_item)
 
