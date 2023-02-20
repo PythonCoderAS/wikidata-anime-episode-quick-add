@@ -67,7 +67,6 @@ class Bot(PropertyAdderBot):
     ):
         super().__init__()
         self.episode_data = episode_data
-        self.episode_items: list[ItemPage] = []
         self.season_item = season_item
         self.myanimelist_id = myanimelist_id
         anime_claim = ItemContainer(season_item).claims(part_of_series).first()
@@ -77,7 +76,14 @@ class Bot(PropertyAdderBot):
             self.anime_item = anime_claim.value
         self.season_container = ItemContainer(self.season_item)
         self.anime_container = ItemContainer(self.anime_item)
-        self.done_first_cycle = False
+        self.episode_items: list[ItemPage] = self.season_container.claims(has_parts).values
+        if len(self.episode_items) != 0:
+            assert len(self.episode_items) == len(self.episode_data), "Episode count mismatch"
+        if num_eps_claim := self.season_container.claims(number_of_episodes).first():
+            assert (
+                num_eps_claim.value.amount == len(self.episode_data)
+            ), "Episode count mismatch"
+            
 
     def get_edit_summary(self, page: ItemPage) -> str:
         if page.id == "-1":
@@ -120,11 +126,14 @@ class Bot(PropertyAdderBot):
         return super().process(output, item)
 
     def run(self):
-        for episode in self.episode_data:
-            with start_transaction(
-                op="create_episode_item", name="Creating episode item"
-            ):
-                self.episode_items.append(self.make_episode_item_output(episode))
+        if not self.episode_items:
+            for episode in self.episode_data:
+                with start_transaction(
+                    op="create_episode_item", name="Creating episode item"
+                ):
+                    new_item = self.make_episode_item_output(episode)
+                    new_item.get(force=True)
+                    self.episode_items.append(new_item)
         season_oh = OutputHelper()
         prop = ExtraProperty.from_property_id_and_value(
             number_of_episodes, WbQuantity(len(self.episode_data), site=site)
@@ -187,7 +196,7 @@ class Bot(PropertyAdderBot):
         item = ItemPage(site)
         item.labels["en"] = episode.title_en
         item.aliases["en"] = []
-        if episode.title_romaji.strip() != episode.title_en.strip():
+        if episode.title_romaji and episode.title_romaji.strip() != episode.title_en.strip():
             item.aliases["en"].append(episode.title_romaji)
         anime_name_en = self.anime_container.labels("en")
         if anime_name_en is not None:

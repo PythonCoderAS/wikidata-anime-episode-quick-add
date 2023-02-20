@@ -216,11 +216,11 @@
         },
         "wikidata-bot-framework": {
             "hashes": [
-                "sha256:ae6c185b87045bcc68d95635bf278bc92811a40c6c9f086d9556fcb9f13a54db",
-                "sha256:d535b97cb78b1805a90592aaa614fe8739014c6685d2fc4334fba2cba4804b1f"
+                "sha256:3cd559b62988e980c89d968ca67269621cab048cc234dd6a8117d87a35eb81f0",
+                "sha256:ecd79031175f646e4be5518a1c9919243d04928b5d3ca0bc72e33375d7888c9b"
             ],
             "index": "pypi",
-            "version": "==7.0.5"
+            "version": "==7.0.6"
         },
         "wikidata-fast-query": {
             "hashes": [
