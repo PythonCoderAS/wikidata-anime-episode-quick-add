@@ -124,37 +124,7 @@ class Bot(PropertyAdderBot):
             with start_transaction(
                 op="create_episode_item", name="Creating episode item"
             ):
-                pass  # self.episode_items.append(self.make_episode_item_output(episode))
-        self.episode_items = [
-            site.get_entity_for_entity_id(item)
-            for item in [
-                "Q116844022",
-                "Q116844027",
-                "Q116844024",
-                "Q116844025",
-                "Q116844030",
-                "Q116844031",
-                "Q116844028",
-                "Q116844029",
-                "Q116844034",
-                "Q116844035",
-                "Q116844032",
-                "Q116844033",
-                "Q116844038",
-                "Q116844039",
-                "Q116844036",
-                "Q116844037",
-                "Q116844042",
-                "Q116844043",
-                "Q116844040",
-                "Q116844041",
-                "Q116844046",
-                "Q116844047",
-                "Q116844044",
-                "Q116844045",
-                "Q116844048",
-            ]
-        ]
+                self.episode_items.append(self.make_episode_item_output(episode))
         season_oh = OutputHelper()
         prop = ExtraProperty.from_property_id_and_value(
             number_of_episodes, WbQuantity(len(self.episode_data), site=site)
@@ -181,6 +151,7 @@ class Bot(PropertyAdderBot):
         extra_property = ExtraProperty.from_property_id_and_value(
             season, self.season_item
         )
+        oh.add_property(extra_property)
         if episode.number == 1:
             claim = Claim(site, follows)
             claim.setSnakType("novalue")
