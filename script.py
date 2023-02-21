@@ -5,13 +5,13 @@ from typing import Optional
 from pywikibot import (
     Claim,
     ItemPage,
-    Site,
     Timestamp,
     WbMonolingualText,
     WbQuantity,
     WbTime,
     sleep,
 )
+from pywikibot.pagegenerators import WikidataSPARQLPageGenerator
 from requests import ConnectionError, HTTPError
 from wikidata_bot_framework import (
     EntityPage,
@@ -79,9 +79,9 @@ class Bot(PropertyAdderBot):
         self.anime_container = ItemContainer(self.anime_item)
         self.episode_items: list[ItemPage] = self.season_container.claims(
             has_parts
-        ).values
+        ).values or list(WikidataSPARQLPageGenerator("SELECT ?item WHERE {?item wdt:%s wd:%s . }" % (season, self.season_item.id), site=site))
         if len(self.episode_items) != 0:
-            assert len(self.episode_items) == len(
+            assert len(self.episode_items) <= len(
                 self.episode_data
             ), "Episode count mismatch"
         if num_eps_claim := self.season_container.claims(number_of_episodes).first():
@@ -136,8 +136,8 @@ class Bot(PropertyAdderBot):
         return super().process(output, item)
 
     def run(self):
-        if not self.episode_items:
-            for episode in self.episode_data:
+        if not self.episode_items or len(self.episode_items) < len(self.episode_data):
+            for episode in self.episode_data[len(self.episode_items):]:
                 with start_transaction(
                     op="create_episode_item", name="Creating episode item"
                 ):
