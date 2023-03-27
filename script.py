@@ -55,7 +55,7 @@ class EpisodeData:
     title_en: str
     title_ja: Optional[str]
     title_romaji: Optional[str]
-    aired: Timestamp
+    aired: Optional[Timestamp]
 
 
 class Bot(PropertyAdderBot):
@@ -265,14 +265,11 @@ class Bot(PropertyAdderBot):
                 original_language: japanese,
             }
         )
-        oh.add_property_from_property_ids_and_values(
-            {
-                publication_date: WbTime.fromTimestamp(
+        if episode.aired:
+            oh.add_property_from_property_id_and_value(publication_date, WbTime.fromTimestamp(
                     episode.aired, precision=WbTime.PRECISION["day"]
-                ),
-                part_of_series: self.anime_item,
-            }
-        )
+                ))
+        oh.add_property_from_property_id_and_value(part_of_series, self.anime_item)
         if episode.title_ja:
             oh.add_property_from_property_id_and_value(
                 title, WbMonolingualText(episode.title_ja, "ja")
@@ -325,7 +322,7 @@ def main():
                             title_en=item["title"],
                             title_ja=item["title_japanese"],
                             title_romaji=item["title_romanji"],
-                            aired=Timestamp.fromisoformat(item["aired"]),
+                            aired=Timestamp.fromisoformat(item["aired"]) if item["aired"] else None,
                         )
                         for num, item in enumerate(data["data"], 1)
                     ]
