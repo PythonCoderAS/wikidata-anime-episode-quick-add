@@ -1,3 +1,26 @@
+[project]
+name = ""
+version = "0.0.1"
+requires-python = "~=3.12"
+dependencies = [
+    "requests==2.32.5",
+    "wikidata-bot-framework==8.0.0",
+    "wikidata-fast-query==2.3.0",
+]
+
 [tool.isort]
 profile = "black"
 skip_gitignore = true
+
+[dependency-groups]
+dev = [
+    "ruff"
+]
+
+[tool.uv]
+package = false
+default-groups = "all"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
