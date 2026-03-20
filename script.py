@@ -144,6 +144,9 @@ class Bot(PropertyAdderBot):
                     new_item = self.make_episode_item_output(episode)
                     new_item.get(force=True)
                     self.episode_items.append(new_item)
+                    print(f"Created episode item for S{int(self.season_container.claims("P179").qualifiers("P1545").first()[0].value):02d}E{episode.number:02d}: {new_item.id}")
+        else:
+            print(f"Skipping making new items since there are already {len(self.episode_items)} episodes.")
         season_oh = OutputHelper()
         prop = ExtraProperty.from_property_id_and_value(
             number_of_episodes, WbQuantity(len(self.episode_data), site=site)
@@ -212,6 +215,8 @@ class Bot(PropertyAdderBot):
         ):
             item.aliases["en"].append(episode.title_romaji)
         anime_name_en = self.anime_container.labels("en")
+        if anime_name_en is None:
+            raise ValueError(f"Name is None for episode {episode}")
         if anime_name_en is not None:
             item.aliases["en"].append(f"{anime_name_en} Episode {episode_num}")
             item.aliases["en"].append(f"{anime_name_en} ep {episode_num}")
